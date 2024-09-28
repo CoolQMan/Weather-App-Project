@@ -64,12 +64,9 @@ public static final String APIKEY = "YOUR_API_KEY";
 
 ## Screenshots
 
-![Screenshot_2024-09-28-22-42-33-42_77d0e59aee6826e2694298b5b46c5b23](https://github.com/user-attachments/assets/b4554128-1331-4178-826f-bd54c2999968)
-![Screenshot_2024-09-28-22-40-51-52_77d0e59aee6826e2694298b5b46c5b23 1](https://github.com/user-attachments/assets/6f7440ed-3813-4403-9ae2-ffaf9d24a304)
-![Screenshot_2024-09-28-22-39-59-71_77d0e59aee6826e2694298b5b46c5b23](https://github.com/user-attachments/assets/266892b9-b259-499d-96e1-4a849253e209)
-
-
-
+![Screenshot_2024-09-28-22-42-33-42_77d0e59aee6826e2694298b5b46c5b23](https://github.com/user-attachments/assets/4dcd8c6e-9def-40d9-bd25-f588bec89b49)
+![Screenshot_2024-09-28-22-40-51-52_77d0e59aee6826e2694298b5b46c5b23](https://github.com/user-attachments/assets/8e3d878c-1f3d-41f2-b6fc-df1a98622ac7)
+![Screenshot_2024-09-28-22-39-59-71_77d0e59aee6826e2694298b5b46c5b23](https://github.com/user-attachments/assets/931868b7-6686-4052-98e7-10e1443cb5a5)
 
 ## License
 
