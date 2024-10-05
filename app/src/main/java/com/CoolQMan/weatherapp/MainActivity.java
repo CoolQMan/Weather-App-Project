@@ -1,12 +1,14 @@
 package com.CoolQMan.weatherapp;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.webkit.PermissionRequest;
 import android.widget.SearchView;
@@ -54,6 +56,9 @@ public class MainActivity extends AppCompatActivity {
     ConstraintLayout main;
     LottieAnimationView lottieAnimationView;
     String cityName;
+    FusedLocationProviderClient fusedLocationClient;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -81,41 +86,72 @@ public class MainActivity extends AppCompatActivity {
         lottieAnimationView = findViewById(R.id.lottieAnimationView);
         searchCity();
 
-        // Fetch weather data
-        FusedLocationProviderClient fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
 
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
             String[] perms = {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
             ActivityCompat.requestPermissions(this, perms, LOCATION_PERMISSION_REQUEST_CODE);
-            return;
+
+        } else {
+            getCurrentLocation();
         }
+
+
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                getCurrentLocation();  // Permission granted, so get location now
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private void getCurrentLocation(){
         fusedLocationClient.getLastLocation()
                 .addOnSuccessListener(this, new OnSuccessListener<Location>() {
                     @Override
                     public void onSuccess(Location location) {
-                        // Got last known location. In some rare situations this can be null.
                         if (location != null) {
-                            // Use the location here
-                            getCityName(location.getLatitude(), location.getLongitude());
-                        }
-                    }
-                    public void getCityName(double latitude, double longitude) {
-                        Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
-                        try {
-                            List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
-                            if (addresses != null && !addresses.isEmpty()) {
-                                cityName = addresses.get(0).getLocality();
-                                // Use the city name here
-                                Log.d("City Name", cityName);
-                                fetchWeatherData(cityName);
-                            }
-                        } catch (IOException e) {
-                            e.printStackTrace();
+                            // Fetch city name based on the location and then fetch weather data
+                            getCityName(location.getLatitude(), location.getLongitude(), new CityNameCallback() {
+                                @Override
+                                public void onCityNameRetrieved(String cityName) {
+                                    if (cityName != null) {
+                                        fetchWeatherData(cityName);  // Fetch weather data for the city
+                                    } else {
+                                        fetchWeatherData("New Delhi");  // Default to New Delhi
+                                    }
+                                }
+                            });
+                        } else {
+                            // Handle null location (e.g., fallback to default location)
+                            fetchWeatherData("New Delhi");
                         }
                     }
                 });
-
+    }
+    private void getCityName(double latitude, double longitude, CityNameCallback callback) {
+        Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
+        try {
+            List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
+            if (addresses != null && !addresses.isEmpty()) {
+                cityName = addresses.get(0).getLocality();
+                // Use the city name here
+                callback.onCityNameRetrieved(cityName);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            callback.onCityNameRetrieved(null);
+        }
     }
 
     public void fetchWeatherData(String cityName) {
