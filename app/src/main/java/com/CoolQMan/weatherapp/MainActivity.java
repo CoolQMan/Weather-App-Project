@@ -1,8 +1,14 @@
 package com.CoolQMan.weatherapp;
 
+import android.Manifest;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
+import android.webkit.PermissionRequest;
 import android.widget.SearchView;
 import android.widget.TextView;
 
@@ -10,16 +16,24 @@ import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnSuccessListener;
 
+import java.io.IOException;
+import java.security.Permission;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 import retrofit2.Call;
@@ -31,17 +45,21 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class MainActivity extends AppCompatActivity {
 
     static final String APIKEY = "YOUR_API_KEY";
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1000;
+
 
 
     TextView cityNameView, temp, weather, max_temp, min_temp, day, date, humidity, windSpeed, condition, sunRise, sunSet, sea;
     SearchView searchView;
     ConstraintLayout main;
     LottieAnimationView lottieAnimationView;
+    String cityName;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
+
 
         // Initialize TextViews
         cityNameView = findViewById(R.id.cityName);
@@ -63,11 +81,41 @@ public class MainActivity extends AppCompatActivity {
         lottieAnimationView = findViewById(R.id.lottieAnimationView);
         searchCity();
 
-        SharedPreferences pref =getSharedPreferences("SavedCity", MODE_PRIVATE);
-        String city = pref.getString("City", "Delhi");
-
         // Fetch weather data
-        fetchWeatherData(city);
+        FusedLocationProviderClient fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            String[] perms = {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
+            ActivityCompat.requestPermissions(this, perms, LOCATION_PERMISSION_REQUEST_CODE);
+            return;
+        }
+        fusedLocationClient.getLastLocation()
+                .addOnSuccessListener(this, new OnSuccessListener<Location>() {
+                    @Override
+                    public void onSuccess(Location location) {
+                        // Got last known location. In some rare situations this can be null.
+                        if (location != null) {
+                            // Use the location here
+                            getCityName(location.getLatitude(), location.getLongitude());
+                        }
+                    }
+                    public void getCityName(double latitude, double longitude) {
+                        Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
+                        try {
+                            List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
+                            if (addresses != null && !addresses.isEmpty()) {
+                                cityName = addresses.get(0).getLocality();
+                                // Use the city name here
+                                Log.d("City Name", cityName);
+                                fetchWeatherData(cityName);
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+
     }
 
     public void fetchWeatherData(String cityName) {
@@ -145,11 +193,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean onQueryTextSubmit(String query) {
                 if(query != null){
-                    SharedPreferences pref = getSharedPreferences("SavedCity", MODE_PRIVATE);
-                    SharedPreferences.Editor editor = pref.edit();
-                    editor.putString("City", query);
-                    editor.apply();
                     fetchWeatherData(query);
+                    searchView.clearFocus();
                 }
                 return true;
             }
@@ -182,6 +227,7 @@ public class MainActivity extends AppCompatActivity {
             case "Mist":
             case "Haze":
             case "Foggy":
+            case "Fog":
 
                 main.setBackgroundResource(R.drawable.colud_background);
                 lottieAnimationView.setAnimation(R.raw.cloud);
